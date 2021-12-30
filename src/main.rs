@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 use bevy::render::camera::*;
 
+extern crate nalgebra as na;
+use na::Vector2;
+use ncollide2d::shape::{Ball, Cuboid};
+
 mod player;
 
 use player::*;
@@ -25,7 +29,8 @@ fn setup(
       ..Default::default()
     })
     .insert(Player)
-    .insert(Velocity(Vec2::ZERO));
+    .insert(Velocity(Vec2::ZERO))
+    .insert(BallCollider(Ball::new(2.0)));
 
   commands
     .spawn()
@@ -34,12 +39,13 @@ fn setup(
       transform: Transform::from_translation(Vec3::new(-30.0, 30.0, 1.0)),
       ..Default::default()
     })
-    .insert(Collider);
+    .insert(Collider)
+    .insert(RectCollider(Cuboid::new(Vector2::new(2.0, 3.0))));
 }
 
 fn move_infront(
   player_query: Query<&Transform, With<Player>>,
-  mut sprite_query: Query<&mut Transform, (Without<Player>, With<Sprite>)>
+  mut sprite_query: Query<&mut Transform, (Without<Player>, With<Sprite>)>,
 ) {
   if let Ok(transform) = player_query.single() {
     for mut c_transform in sprite_query.iter_mut() {
