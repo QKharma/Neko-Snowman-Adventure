@@ -1,85 +1,63 @@
 use bevy::prelude::*;
 use bevy::render::camera::*;
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
-enum ExecLabels {
-    Movement,
-}
+mod player;
 
-const SPEED: f32 = 60.0;
-
-struct Player;
-struct Velocity(Vec2);
+use player::*;
 
 fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut materials:ResMut<Assets<ColorMaterial>>,
+  mut commands: Commands,
+  asset_server: Res<AssetServer>,
+  mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let player_handle = asset_server.load("nekoSnowFemboy.png");
-    let mut camera =  OrthographicCameraBundle::new_2d();
-    camera.orthographic_projection.window_origin = WindowOrigin::Center;
-    camera.orthographic_projection.scaling_mode = ScalingMode::WindowSize;
-    camera.orthographic_projection.scale = 0.25;
-    
-    commands.spawn_bundle(camera);
-    commands
-        .spawn_bundle(SpriteBundle{
-            material: materials.add(player_handle.into()),
-            ..Default::default()
-        })
-        .insert(Player)
-        .insert(Velocity(Vec2::ZERO));
+  let player_handle = asset_server.load("nekoSnowFemboy.png");
+  let sign_handle = asset_server.load("sign.png");
+  let mut camera = OrthographicCameraBundle::new_2d();
+  camera.orthographic_projection.window_origin = WindowOrigin::Center;
+  camera.orthographic_projection.scaling_mode = ScalingMode::WindowSize;
+  camera.orthographic_projection.scale = 0.25;
+
+  commands.spawn_bundle(camera);
+  commands
+    .spawn_bundle(SpriteBundle {
+      material: materials.add(player_handle.into()),
+      transform: Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
+      ..Default::default()
+    })
+    .insert(Player)
+    .insert(Velocity(Vec2::ZERO));
+
+  commands
+    .spawn()
+    .insert_bundle(SpriteBundle {
+      material: materials.add(sign_handle.into()),
+      transform: Transform::from_translation(Vec3::new(-30.0, 30.0, 1.0)),
+      ..Default::default()
+    })
+    .insert(Collider);
 }
 
-fn get_input(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Velocity, With<Player>>
+fn move_infront(
+  player_query: Query<&Transform, With<Player>>,
+  mut sprite_query: Query<&mut Transform, (Without<Player>, With<Sprite>)>
 ) {
-    if let Ok(mut velocity) = query.single_mut() {
-        velocity.0 = Vec2::ZERO;
-        if keyboard_input.pressed(KeyCode::W) {
-            velocity.0.y += 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::S) {
-            velocity.0.y -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::A) {
-            velocity.0.x -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::D) {
-            velocity.0.x += 1.0;
-        }
-        if velocity.0.length() > 1.0 {
-            velocity.0.x /= velocity.0.length();
-            velocity.0.y /= velocity.0.length();
-        }
+  if let Ok(transform) = player_query.single() {
+    for mut c_transform in sprite_query.iter_mut() {
+      if transform.translation.y > c_transform.translation.y {
+        c_transform.translation.z = 3.0;
+      } else {
+        c_transform.translation.z = 1.0;
+      }
     }
-}
-
-fn move_player(
-    time: Res<Time>,
-    mut query: Query<(&mut Transform, &Velocity, &mut Sprite), With<Player>>
-) {
-    if let Ok((mut transform, velocity, mut sprite)) = query.single_mut() {
-        let translation = &mut transform.translation;
-        translation.x += SPEED * velocity.0.x * time.delta_seconds();
-        translation.y += SPEED * velocity.0.y * time.delta_seconds();
-
-        if velocity.0.x < 0.0 {
-            sprite.flip_x = true
-        }
-        if velocity.0.x > 0.0 {
-            sprite.flip_x = false
-        }
-    }
+  }
 }
 
 fn main() {
-    App::build()
-        .add_plugins(DefaultPlugins)
-        .add_startup_system(setup.system())
-        .add_system(get_input.system().label(ExecLabels::Movement))
-        .add_system(move_player.system().after(ExecLabels::Movement))
-        .run();
+  App::build()
+    .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
+    .add_plugins(DefaultPlugins)
+    .add_startup_system(setup.system())
+    .add_plugin(PlayerPlugin)
+    .add_system(move_infront.system())
+    .run();
 }
