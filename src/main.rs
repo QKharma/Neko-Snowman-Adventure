@@ -50,17 +50,28 @@ fn get_input(
         if keyboard_input.pressed(KeyCode::D) {
             velocity.0.x += 1.0;
         }
+        if velocity.0.length() > 1.0 {
+            velocity.0.x /= velocity.0.length();
+            velocity.0.y /= velocity.0.length();
+        }
     }
 }
 
 fn move_player(
     time: Res<Time>,
-    mut query: Query<(&mut Transform, &Velocity), With<Player>>
+    mut query: Query<(&mut Transform, &Velocity, &mut Sprite), With<Player>>
 ) {
-    if let Ok((mut transform, velocity)) = query.single_mut() {
+    if let Ok((mut transform, velocity, mut sprite)) = query.single_mut() {
         let translation = &mut transform.translation;
         translation.x += SPEED * velocity.0.x * time.delta_seconds();
         translation.y += SPEED * velocity.0.y * time.delta_seconds();
+
+        if velocity.0.x < 0.0 {
+            sprite.flip_x = true
+        }
+        if velocity.0.x > 0.0 {
+            sprite.flip_x = false
+        }
     }
 }
 
