@@ -1,20 +1,20 @@
-use bevy::prelude::*;
-use bevy::render::camera::*;
+use bevy::{prelude::*, window::WindowMode, render::camera::*};
 
 extern crate nalgebra as na;
 use na::Vector2;
-use ncollide2d::shape::{Ball, Cuboid};
+use ncollide2d::shape::{Cuboid};
 
 mod player;
+mod sprites;
 
 use player::*;
+use sprites::*;
 
 fn setup(
   mut commands: Commands,
   asset_server: Res<AssetServer>,
   mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-  let player_handle = asset_server.load("nekoSnowFemboy.png");
   let sign_handle = asset_server.load("sign.png");
   let mut camera = OrthographicCameraBundle::new_2d();
   camera.orthographic_projection.window_origin = WindowOrigin::Center;
@@ -22,16 +22,6 @@ fn setup(
   camera.orthographic_projection.scale = 0.25;
 
   commands.spawn_bundle(camera);
-  commands
-    .spawn_bundle(SpriteBundle {
-      material: materials.add(player_handle.into()),
-      transform: Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
-      ..Default::default()
-    })
-    .insert(Player)
-    .insert(Velocity(Vec2::ZERO))
-    .insert(BallCollider(Ball::new(2.0)));
-
   commands
     .spawn()
     .insert_bundle(SpriteBundle {
@@ -58,12 +48,21 @@ fn move_infront(
   }
 }
 
+fn window_resize_system(mut windows: ResMut<Windows>) {
+  let window = windows.get_primary_mut().unwrap();
+  println!("Window size was: {},{}", window.width(), window.height());
+  window.set_resolution(1920.0, 1080.0);
+  window.set_mode(WindowMode::Windowed);
+}
+
 fn main() {
   App::build()
     .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
     .add_plugins(DefaultPlugins)
-    .add_startup_system(setup.system())
+    .add_plugin(SpritePlugin)
     .add_plugin(PlayerPlugin)
+    .add_startup_system(setup.system())
+    .add_startup_system(window_resize_system.system())
     .add_system(move_infront.system())
     .run();
 }

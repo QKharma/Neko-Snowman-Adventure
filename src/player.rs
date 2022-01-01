@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
 extern crate nalgebra as na;
-
 use na::{Isometry2, Vector2};
 use ncollide2d::query;
 use ncollide2d::shape::{Ball, Cuboid};
+
+use crate::sprites::*;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
 enum ExecLabels {
@@ -27,6 +28,7 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
   fn build(&self, app: &mut AppBuilder) {
     app
+      .add_startup_system(spawn_player.system())
       .add_system(player_input.system().label(ExecLabels::Movement))
       .add_system(
         check_collision
@@ -43,24 +45,44 @@ impl Plugin for PlayerPlugin {
   }
 }
 
-fn player_input(
-  keyboard_input: Res<Input<KeyCode>>,
-  mut query: Query<(&mut Velocity, &mut Sprite), With<Player>>,
+fn spawn_player(
+  mut commands: Commands,
+  sprites: Res<SpriteHandles>,
 ) {
-  if let Ok((mut velocity, mut sprite)) = query.single_mut() {
+  commands
+    .spawn_bundle(SpriteBundle {
+      material: sprites.player_idle.clone(),
+      transform: Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
+      ..Default::default()
+    })
+    .insert(Player)
+    .insert(Velocity(Vec2::ZERO))
+    .insert(BallCollider(Ball::new(2.0)));
+}
+
+fn player_input(
+  sprites: Res<SpriteHandles>,
+  keyboard_input: Res<Input<KeyCode>>,
+  mut query: Query<(&mut Velocity, &mut Sprite, &mut Handle<ColorMaterial>), With<Player>>,
+) {
+  if let Ok((mut velocity, mut sprite, mut handle)) = query.single_mut() {
     velocity.0 = Vec2::ZERO;
     if keyboard_input.pressed(KeyCode::W) {
       velocity.0.y += 1.0;
+      *handle = sprites.player_up.clone();
     }
     if keyboard_input.pressed(KeyCode::S) {
       velocity.0.y -= 1.0;
+      *handle = sprites.player_down.clone();
     }
     if keyboard_input.pressed(KeyCode::A) {
       velocity.0.x -= 1.0;
+      *handle = sprites.player_idle.clone();
       sprite.flip_x = true;
     }
     if keyboard_input.pressed(KeyCode::D) {
       velocity.0.x += 1.0;
+      *handle = sprites.player_idle.clone();
       sprite.flip_x = false;
     }
     if velocity.0.length() > 1.0 {
@@ -91,12 +113,10 @@ fn check_collision(
 
       match penetrating {
         Some(_) => {
-          //velocity.0 += Vec2::new(penetrating.unwrap().normal.x, penetrating.unwrap().normal.y) * penetrating.unwrap().depth;
           velocity.0 = Vec2::new(
             velocity.0.x - penetrating.unwrap().normal.x,
             velocity.0.y - penetrating.unwrap().normal.y,
           );
-          println!("({},{})", velocity.0.x, velocity.0.y);
         }
         None => {}
       }
