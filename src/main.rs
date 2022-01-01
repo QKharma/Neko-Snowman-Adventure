@@ -1,8 +1,10 @@
-use bevy::{prelude::*, window::WindowMode, render::camera::*};
+use benimator::*;
+use bevy::{prelude::*, render::camera::*, window::WindowMode};
+use bevy_asset_loader::AssetLoader;
 
 extern crate nalgebra as na;
 use na::Vector2;
-use ncollide2d::shape::{Cuboid};
+use ncollide2d::shape::Cuboid;
 
 mod player;
 mod sprites;
@@ -30,6 +32,7 @@ fn setup(
       ..Default::default()
     })
     .insert(Collider)
+    .insert(Interactable)
     .insert(RectCollider(Cuboid::new(Vector2::new(2.0, 3.0))));
 }
 
@@ -51,17 +54,22 @@ fn move_infront(
 fn window_resize_system(mut windows: ResMut<Windows>) {
   let window = windows.get_primary_mut().unwrap();
   println!("Window size was: {},{}", window.width(), window.height());
-  window.set_resolution(1920.0, 1080.0);
   window.set_mode(WindowMode::Windowed);
 }
 
 fn main() {
-  App::build()
+  let mut app = App::build();
+  AssetLoader::new(GameState::AssetLoading, GameState::Next)
+    .with_collection::<SpriteHandles>()
+    .build(&mut app);
+  app
+    .add_state(GameState::AssetLoading)
     .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
     .add_plugins(DefaultPlugins)
-    .add_plugin(SpritePlugin)
+    .add_plugin(AnimationPlugin)
+    //.add_plugin(SpritePlugin)
     .add_plugin(PlayerPlugin)
-    .add_startup_system(setup.system())
+    .add_system_set(SystemSet::on_enter(GameState::Next).with_system(setup.system()))
     .add_startup_system(window_resize_system.system())
     .add_system(move_infront.system())
     .run();
