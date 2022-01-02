@@ -4,8 +4,9 @@ use bevy::render::camera::Camera;
 extern crate nalgebra as na;
 use na::{Isometry2, Vector2};
 use ncollide2d::query::{self, Proximity};
-use ncollide2d::shape::{Ball, Cuboid};
+use ncollide2d::shape::{Ball};
 
+use crate::colliders::*;
 use crate::sprites::*;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
@@ -25,12 +26,7 @@ const SPEED: f32 = 70.0;
 pub struct Player;
 pub struct Velocity(pub Vec2);
 
-pub struct Collider;
-
 pub struct Interactable;
-
-pub struct BallCollider(pub Ball<f32>);
-pub struct RectCollider(pub Cuboid<f32>);
 
 pub struct PlayerPlugin;
 
@@ -148,7 +144,6 @@ fn check_interaction(
   keyboard_input: Res<Input<KeyCode>>,
 ) {
   if keyboard_input.just_pressed(KeyCode::E) {
-    println!("pressed E");
     let margin = 2.0;
 
     if let Ok((transform, collider)) = player_query.single() {
